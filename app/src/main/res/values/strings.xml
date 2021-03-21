@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">VideoRecorder</string>
+    <string name="title_required">Required</string>
+    <string name="description_permission">%1$s permission is required to proceed further</string>
+</resources>
