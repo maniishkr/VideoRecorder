@@ -1,4 +1,4 @@
-package com.android.lam.videorecorder.Utils;
+package com.android.lam.videorecorder.views.Utils;
 
 import android.app.Activity;
 import android.content.Context;
@@ -6,8 +6,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.provider.MediaStore;
 
-import com.android.lam.videorecorder.services.PermissionService;
-
+import com.android.lam.videorecorder.views.services.PermissionService;
 
 public class Utils {
 

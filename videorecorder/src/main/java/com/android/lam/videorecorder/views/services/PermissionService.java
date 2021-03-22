@@ -1,4 +1,4 @@
-package com.android.lam.videorecorder.services;
+package com.android.lam.videorecorder.views.services;
 
 import android.Manifest;
 import android.app.Activity;
@@ -12,7 +12,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
 
 import com.android.lam.videorecorder.R;
-import com.android.lam.videorecorder.Utils.Utils;
+import com.android.lam.videorecorder.views.Utils.Utils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
