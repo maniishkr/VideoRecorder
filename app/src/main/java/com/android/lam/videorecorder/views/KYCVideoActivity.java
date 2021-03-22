@@ -1,112 +1,124 @@
 package com.android.lam.videorecorder.views;
 
-import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.provider.MediaStore;
-import android.provider.Settings;
+import android.os.Environment;
+import android.util.Log;
+import android.util.Rational;
+import android.util.Size;
+import android.view.TextureView;
+import android.view.View;
+import android.widget.ImageButton;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.camera.core.CameraX;
+import androidx.camera.core.Preview;
+import androidx.camera.core.PreviewConfig;
+import androidx.camera.core.VideoCapture;
+import androidx.camera.core.VideoCaptureConfig;
 
 import com.android.lam.videorecorder.R;
+import com.android.lam.videorecorder.Utils.Utils;
 import com.android.lam.videorecorder.services.PermissionService;
 
-import static com.android.lam.videorecorder.Utils.AppConstants.PERMISSION_REQUEST;
-import static com.android.lam.videorecorder.Utils.AppConstants.REQUEST_VIDEO_CAPTURE;
+import java.io.File;
 
-public class KYCVideoActivity extends AppCompatActivity implements PermissionService.PermissionListener {
 
-    PermissionService permissionService;
+public class KYCVideoActivity extends AppCompatActivity implements PermissionService.VideoRecorderListener {
+
+    private PermissionService permissionService;
+    private TextureView textureView;
+    private ImageButton captureButton, stopButton;
+    private VideoCapture videoCapture;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_k_y_c_video);
-        if (hasCamera()) {
+        initViews();
+        if (Utils.hasCamera(getApplicationContext())) {
             permissionService = new PermissionService();
-            permissionService.askPermissions(
-                    this,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                    Manifest.permission.CAMERA,
-                    Manifest.permission.RECORD_AUDIO
-            );
-
+            permissionService.startVideoRecorder(this);
         }
     }
 
-    private boolean hasCamera() {
-        return (getPackageManager().hasSystemFeature(
-                PackageManager.FEATURE_CAMERA_ANY));
+    @SuppressLint({"RestrictedApi", "ClickableViewAccessibility"})
+    private void setTouchListener() {
+        File file = new File(Environment.getExternalStorageDirectory() + "/" + System.currentTimeMillis() + ".mp4");
+        captureButton = findViewById(R.id.capture_button);
+
+        captureButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                videoCapture.startRecording(file, new VideoCapture.OnVideoSavedListener() {
+                    @Override
+                    public void onVideoSaved(File file) {
+
+                    }
+
+                    @Override
+                    public void onError(VideoCapture.UseCaseError useCaseError, String message, @Nullable Throwable cause) {
+
+                    }
+                });
+            }
+        });
+
+        stopButton.setOnClickListener(v -> videoCapture.stopRecording());
     }
 
-    private void dispatchTakeVideoIntent() {
-        Intent takeVideoIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
-        if (takeVideoIntent.resolveActivity(getPackageManager()) != null) {
-            startActivityForResult(takeVideoIntent, REQUEST_VIDEO_CAPTURE);
-        }
+    @SuppressLint("RestrictedApi")
+    private void initConfiguration() {
+
+
+        Rational aspectRatio = new Rational(textureView.getWidth(), textureView.getHeight());
+        Size screen = new Size(textureView.getWidth(), textureView.getHeight());
+        PreviewConfig pConfig = new PreviewConfig.Builder().setTargetAspectRatio(aspectRatio).setTargetResolution(screen).build();
+        Preview preview = new Preview(pConfig);
+        preview.setOnPreviewOutputUpdateListener(output -> {
+            textureView.setSurfaceTexture(output.getSurfaceTexture());
+        });
+
+        VideoCaptureConfig videoCaptureConfig = new VideoCaptureConfig.Builder()
+                .setLensFacing(CameraX.LensFacing.FRONT)
+                .setTargetAspectRatio(new Rational(16, 9))
+                .build();
+
+        videoCapture = new VideoCapture(videoCaptureConfig);
+        setTouchListener();
+    }
+
+    private void initViews() {
+        textureView = findViewById(R.id.view_finder);
+        stopButton = findViewById(R.id.stop_button);
     }
 
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
         super.onActivityResult(requestCode, resultCode, intent);
-        if (requestCode == REQUEST_VIDEO_CAPTURE && intent != null) {
-            Uri videoUri = intent.getData();
-        }
+        if (permissionService != null)
+            permissionService.onActivityResult(requestCode, resultCode, intent);
     }
 
     @Override
-    public void permissionGranted(String... permissions) {
-        dispatchTakeVideoIntent();
+    public void getVideoUri(Uri uri) {
+        Log.d("asdf", "video uri is " + uri);
     }
 
-    @Override
-    public void permissionDenied(String... permissions) {
-        permissionService.handleDeniedPermission(this, permissions);
-    }
-
-    @Override
-    public void shouldShowRequestPermission(String... permission) {
-        showAlertDialog(getString(R.string.description_permission, permission[0]), permission);
-    }
-
-    @Override
-    public void neverAskPermission(String... permission) {
-        redirectSettings();
-    }
-
-    private void showAlertDialog(String message, String... permission) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle(getString(R.string.title_required));
-        builder.setMessage(message);
-        builder.setPositiveButton(getString(android.R.string.ok), (dialog, which) -> {
-            permissionService.askPermissions(this, permission);
-        });
-        AlertDialog dialog = builder.create();
-        dialog.show();
-    }
-
-    private void redirectSettings() {
-        Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-        i.setData(Uri.parse("package:" + getApplicationContext().getPackageName()));
-        i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivity(i);
-        finish();
-    }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_REQUEST) {
-            permissionService.handlePermissionsResults(permissions, grantResults);
-        }
+        if (permissionService != null)
+            permissionService.onRequestPermissionResult(this, requestCode, permissions, grantResults);
     }
 
 }
