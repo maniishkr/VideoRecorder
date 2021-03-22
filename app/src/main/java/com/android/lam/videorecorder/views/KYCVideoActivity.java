@@ -37,7 +37,6 @@ public class KYCVideoActivity extends AppCompatActivity implements PermissionSer
     private ImageButton captureButton, stopButton;
     private VideoCapture videoCapture;
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
