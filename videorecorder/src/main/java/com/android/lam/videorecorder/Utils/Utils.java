@@ -8,9 +8,7 @@ import android.provider.MediaStore;
 
 import com.android.lam.videorecorder.services.PermissionService;
 
-
 public class Utils {
-
     public static void dispatchTakeVideoIntent(Activity activity) {
         Intent takeVideoIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
         if (takeVideoIntent.resolveActivity(activity.getPackageManager()) != null) {
