@@ -1,4 +1,4 @@
-package com.android.lam.videorecorder.views.services;
+package com.android.lam.videorecorder.services;
 
 import android.Manifest;
 import android.app.Activity;
@@ -12,7 +12,6 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
 
 import com.android.lam.videorecorder.R;
-import com.android.lam.videorecorder.views.Utils.Utils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,19 +30,25 @@ public class PermissionService {
         askPermissions(activity, permissions);
     }
 
+    public void askVideoRecorderPermission(Activity activity) {
+        askPermissions(activity, permissions);
+    }
+
 
     private void askPermissions(Activity activity, String... permissions) {
+        videoRecorderListener = (VideoRecorderListener) activity;
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            Utils.dispatchTakeVideoIntent(activity);
+            videoRecorderListener.permissionGranted(permissions);
             return;
         }
-        videoRecorderListener = (VideoRecorderListener) activity;
+
         List<String> permissionNeededList = getPermissionNeededList(activity, permissions);
         if (permissionNeededList.size() > 0) {
             ActivityCompat.requestPermissions(activity, permissionNeededList.toArray(new String[permissionNeededList.size()]), PERMISSION_REQUEST);
             return;
         }
-        Utils.dispatchTakeVideoIntent(activity);
+        videoRecorderListener.permissionGranted(permissions);
+        // Utils.dispatchTakeVideoIntent(activity);
     }
 
     private List<String> getPermissionNeededList(Activity activity, String... permissions) {
@@ -69,7 +74,8 @@ public class PermissionService {
         }
         if (videoRecorderListener != null) {
             if (deniedCount == 0) {
-                Utils.dispatchTakeVideoIntent(activity);
+                videoRecorderListener.permissionGranted(permissions);
+                //Utils.dispatchTakeVideoIntent(activity);
             } else {
                 handleDeniedPermission(activity, permissionResult.keySet().toArray(new String[0]));
             }
@@ -78,12 +84,18 @@ public class PermissionService {
 
     private void handleDeniedPermission(Activity activity, String... permissions) {
         for (String permission : permissions) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)) {
+                videoRecorderListener.shouldShowRational(permissions);
+            } else {
+                videoRecorderListener.neverAsk(permission);
+            }
             showAlertDialog(
                     activity,
                     activity.getString(R.string.title_required),
                     activity.getString(R.string.description_permission, permission.substring(permission.lastIndexOf(".") + 1)),
                     !ActivityCompat.shouldShowRequestPermissionRationale(activity, permission),
                     permissions);
+            videoRecorderListener.permissionDenied(permissions);
             break;
         }
     }
@@ -121,6 +133,14 @@ public class PermissionService {
     }
 
     public interface VideoRecorderListener {
+        void permissionGranted(String... permissions);
+
+        void permissionDenied(String... permissions);
+
+        void shouldShowRational(String... permissions);
+
+        void neverAsk(String... permission);
+
         void getVideoUri(Uri uri);
     }
 }
